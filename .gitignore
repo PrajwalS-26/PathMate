@@ -8,8 +8,8 @@ build/
 target/
 
 # Dependencies
+.m2/
 .gradle/
-lib/
 
 # Logs and temp files
 *.log
@@ -24,4 +24,11 @@ lib/
 # Editors
 .vscode/
 .idea/
+*.swp
+*.swo
+
+# Java-specific
+*.jar
+*.war
+*.ear
 ```
