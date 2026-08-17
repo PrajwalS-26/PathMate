@@ -34,43 +34,57 @@ function Onboarding() {
     e.preventDefault();
     setLoading(true);
 
-    // Prepare the data to send to backend
-    const profileData = {
-      id: user?.id,
-      name: formData.name,
-      branch: formData.branch,
-      semester: parseInt(formData.semester),
-      sgpa: parseFloat(formData.sgpa) || 0,
-      learning_mode: formData.learningMode,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    };
+    try {
+      // Get the current Supabase session
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError || !session) {
+        throw new Error('No active session found. Please log in again.');
+      }
 
-    // For now, just log the data to console
-    console.log('Onboarding Data:', profileData);
-    console.log('Ready to send to backend API...');
+      // Extract access token and user ID
+      const accessToken = session.access_token;
+      const userId = session.user.id;
 
-    // TODO: In the next step, we'll add the actual API call here
-    // Example:
-    // const response = await fetch('http://localhost:8080/api/profile', {
-    //   method: 'POST',
-    //   headers: {
-    //     'Content-Type': 'application/json',
-    //     'Authorization': `Bearer ${session.access_token}`,
-    //   },
-    //   body: JSON.stringify(profileData),
-    // });
+      // Prepare the profile data
+      const profileData = {
+        name: formData.name,
+        branch: formData.branch,
+        semester: parseInt(formData.semester),
+        sgpa: parseFloat(formData.sgpa) || 0,
+        learningMode: formData.learningMode,
+      };
 
-    // Simulate API call delay
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+      // Make PUT request to backend Profile API
+      const response = await fetch(`http://localhost:8080/api/profiles/${userId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify(profileData),
+      });
 
-    // Store profile in Zustand store
-    setProfile(profileData);
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `Failed to save profile: ${response.status}`);
+      }
 
-    // Redirect to dashboard
-    navigate('/dashboard');
-    
-    setLoading(false);
+      // Get the saved profile data from response
+      const savedProfile = await response.json();
+
+      // Update Zustand store with the new profile
+      setProfile(savedProfile);
+
+      // Navigate to dashboard
+      navigate('/dashboard');
+      
+    } catch (error) {
+      console.error('Onboarding error:', error);
+      alert(error.message || 'An error occurred while saving your profile.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
